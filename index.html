@@ -1,0 +1,262 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Art Studio &amp; Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        .art-canvas {
+            background: linear-gradient(45deg, #f3f4f6 25%, transparent 25%),
+                        linear-gradient(-45deg, #f3f4f6 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #f3f4f6 75%),
+                        linear-gradient(-45deg, transparent 75%, #f3f4f6 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .generated-art {
+            transition: transform 0.3s ease;
+        }
+        .generated-art:hover {
+            transform: scale(1.05);
+        }
+    </style>
+<style>
+                  .hover-highlight {
+                      outline: 2px solid #4A90E2 !important;
+                      cursor: pointer !important;
+                  }
+              </style><style>
+                  .hover-highlight {
+                      outline: 2px solid #4A90E2 !important;
+                      cursor: pointer !important;
+                  }
+              </style></head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <i class="fas fa-robot text-3xl text-purple-600 mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">AI Art Studio</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="createBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                        Create Art
+                    </button>
+                    <button id="galleryBtn" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">
+                        Gallery
+                    </button>
+                    <button id="walletBtn" class="flex items-center bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        <i class="fas fa-wallet mr-2"></i>
+                        <span id="balance">$485.00</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8"><main class="w-full max-w-7xl mx-auto px-4 py-8">
+        <div id="createSection" class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-full">
+                <h2 class="text-2xl font-bold mb-4">Generate Art</h2>
+                <div class="space-y-4 w-full">
+                    <div class="w-full">
+                        <label class="block text-gray-700 mb-2">Style</label>
+                        <select id="styleSelect" class="w-full p-2 border rounded-lg">
+                            <option value="">Select an Art Style</option>
+                            <option value="abstract">Abstract</option>
+                            <option value="impressionist">Impressionist</option>
+                            <option value="digital">Digital Art</option>
+                            <option value="surreal">Surrealism</option>
+                            <option value="minimalist">Minimalist</option>
+                            <option value="pop-art">Pop Art</option>
+                            <option value="cubism">Cubism</option>
+                            <option value="contemporary">Contemporary</option>
+                            <option value="watercolor">Watercolor</option>
+                            <option value="realistic">Realistic</option>
+                        </select>
+                    </div>
+                    <div class="w-full">
+                        <label class="block text-gray-700 mb-2">Prompt</label>
+                        <textarea id="promptInput" class="w-full p-2 border rounded-lg" rows="3" placeholder="Describe your artwork..."></textarea>
+                    </div>
+                    <button id="generateBtn" class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">
+                        Generate (5 Credits)
+                    </button>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-lg w-full">
+                <h2 class="text-2xl font-bold mb-4">Preview</h2>
+                <div id="previewArea" class="art-canvas w-full h-64 rounded-lg flex items-center justify-center">
+                    <img src="https://picsum.photos/400/400?random=0.08630411545599981" class="w-full h-full object-cover rounded-lg">
+                </div>
+                <div class="mt-4 flex justify-between w-full">
+                    <button id="saveBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                        Save to Gallery
+                    </button>
+                    <button id="sellBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        List for Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="gallerySection" class="mt-8 hidden w-full">
+            <h2 class="text-2xl font-bold mb-4">Marketplace</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full" id="artworkGrid"></div>
+        </div>
+    </main></main>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg max-w-md w-full">
+            <h3 class="text-xl font-bold mb-4">List Artwork for Sale</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">Price (USD)</label>
+                    <input type="number" id="priceInput" class="w-full p-2 border rounded-lg" min="1" step="0.01">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button id="cancelListingBtn" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button id="confirmListingBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        List Artwork
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBalance = 1000;
+        let generatedArtwork = null;
+        const artworks = [];
+
+        function updateBalance(amount) {
+            currentBalance += amount;
+            document.getElementById('balance').textContent = `$${currentBalance.toFixed(2)}`;
+        }
+
+        function generateRandomImage() {
+            return `https://picsum.photos/400/400?random=${Math.random()}`;
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            if (currentBalance >= 5) {
+                const style = document.getElementById('styleSelect').value;
+                const prompt = document.getElementById('promptInput').value;
+                
+                if (prompt.trim() === '') {
+                    alert('Please enter a prompt');
+                    return;
+                }
+
+                updateBalance(-5);
+                
+                const previewArea = document.getElementById('previewArea');
+                previewArea.innerHTML = '<div class="animate-pulse"><div class="w-full h-full bg-gray-300 rounded-lg"></div></div>';
+                
+                setTimeout(() => {
+                    generatedArtwork = {
+                        id: Date.now(),
+                        image: generateRandomImage(),
+                        style,
+                        prompt,
+                        price: null
+                    };
+                    
+                    previewArea.innerHTML = `<img src="${generatedArtwork.image}" class="w-full h-full object-cover rounded-lg">`;
+                    
+                    document.getElementById('saveBtn').disabled = false;
+                    document.getElementById('sellBtn').disabled = false;
+                }, 2000);
+            } else {
+                alert('Insufficient credits');
+            }
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            if (generatedArtwork) {
+                artworks.push({...generatedArtwork});
+                alert('Artwork saved to gallery!');
+                updateGallery();
+            }
+        });
+
+        document.getElementById('sellBtn').addEventListener('click', () => {
+            document.getElementById('modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelListingBtn').addEventListener('click', () => {
+            document.getElementById('modal').classList.add('hidden');
+        });
+
+        document.getElementById('confirmListingBtn').addEventListener('click', () => {
+            const price = parseFloat(document.getElementById('priceInput').value);
+            if (price > 0) {
+                if (generatedArtwork) {
+                    generatedArtwork.price = price;
+                    artworks.push({...generatedArtwork});
+                    document.getElementById('modal').classList.add('hidden');
+                    document.getElementById('priceInput').value = '';
+                    alert('Artwork listed for sale!');
+                    updateGallery();
+                }
+            } else {
+                alert('Please enter a valid price');
+            }
+        });
+
+        function updateGallery() {
+            const grid = document.getElementById('artworkGrid');
+            grid.innerHTML = '';
+            
+            artworks.forEach(artwork => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-lg overflow-hidden generated-art';
+                card.innerHTML = `
+                    <img src="${artwork.image}" class="w-full h-48 object-cover">
+                    <div class="p-4">
+                        <p class="text-sm text-gray-600">${artwork.style}</p>
+                        <p class="text-sm text-gray-800 mt-1">${artwork.prompt}</p>
+                        ${artwork.price ? `
+                            <div class="mt-2 flex justify-between items-center">
+                                <span class="text-green-500 font-bold">$${artwork.price.toFixed(2)}</span>
+                                <button onclick="purchaseArtwork(${artwork.id})" class="bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700">
+                                    Buy Now
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function purchaseArtwork(id) {
+            const artwork = artworks.find(a => a.id === id);
+            if (artwork && currentBalance >= artwork.price) {
+                updateBalance(-artwork.price);
+                alert('Artwork purchased successfully!');
+                artworks.splice(artworks.indexOf(artwork), 1);
+                updateGallery();
+            } else {
+                alert('Insufficient funds');
+            }
+        }
+
+        document.getElementById('createBtn').addEventListener('click', () => {
+            document.getElementById('createSection').classList.remove('hidden');
+            document.getElementById('gallerySection').classList.add('hidden');
+        });
+
+        document.getElementById('galleryBtn').addEventListener('click', () => {
+            document.getElementById('createSection').classList.add('hidden');
+            document.getElementById('gallerySection').classList.remove('hidden');
+            updateGallery();
+        });
+    </script>
+
+<iframe name="__privateStripeMetricsController5230" frameborder="0" allowtransparency="true" scrolling="no" role="presentation" allow="payment *" src="https://js.stripe.com/v3/m-outer-3437aaddcdf6922d623e172c2d6f9278.html#url=blob%3Ahttps%3A%2F%2Fwww.theonlyprompt.com%2F977006f7-9111-4308-9163-991da761cdcd&amp;title=AI%20Art%20Studio%20%26%20Marketplace&amp;referrer=&amp;muid=NA&amp;sid=NA&amp;version=6&amp;preview=false" aria-hidden="true" tabindex="-1" style="border: none !important; margin: 0px !important; padding: 0px !important; width: 1px !important; min-width: 100% !important; overflow: hidden !important; display: block !important; visibility: hidden !important; position: fixed !important; height: 1px !important; pointer-events: none !important; user-select: none !important;"></iframe><iframe name="__privateStripeMetricsController6160" frameborder="0" allowtransparency="true" scrolling="no" role="presentation" allow="payment *" src="https://js.stripe.com/v3/m-outer-3437aaddcdf6922d623e172c2d6f9278.html#url=blob%3Ahttps%3A%2F%2Fwww.theonlyprompt.com%2Fc9b5a9ac-f627-4cca-978e-0f1c368ce09b&amp;title=AI%20Art%20Studio%20%26%20Marketplace&amp;referrer=&amp;muid=1533d1f5-a644-4f4e-8e2b-e75263bd2993182a47&amp;sid=e642c406-3507-4ac8-b26e-a072b333f77dbfd3db&amp;version=6&amp;preview=false" aria-hidden="true" tabindex="-1" style="border: none !important; margin: 0px !important; padding: 0px !important; width: 1px !important; min-width: 100% !important; overflow: hidden !important; display: block !important; visibility: hidden !important; position: fixed !important; height: 1px !important; pointer-events: none !important; user-select: none !important;"></iframe></body></html>
